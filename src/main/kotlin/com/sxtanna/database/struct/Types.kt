@@ -58,33 +58,33 @@ sealed class SqlType(val name: String) {
 
 
 	//region Number Types
-	class TinyInt(size : Int, override val unsigned: Boolean = false, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : NumberSqlType(size, "TINYINT") {
+	class TinyInt @JvmOverloads constructor(size : Int, override val unsigned: Boolean = false, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : NumberSqlType(size, "TINYINT") {
 
 		override fun range() : IntRange = if (unsigned) MIN_UNSIGN..TINY_MAX_UNSIGN else TINY_MIN_SIGN..TINY_MAX_SIGN
 
 	}
 
-	class SmallInt(size : Int, override val unsigned: Boolean = false, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : NumberSqlType(size, "SMALLINT") {
+	class SmallInt @JvmOverloads constructor(size : Int, override val unsigned: Boolean = false, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : NumberSqlType(size, "SMALLINT") {
 
 		override fun range() : IntRange = if (unsigned) MIN_UNSIGN..SMALL_MAX_UNSIGN else SMALL_MIN_SIGN..SMALL_MAX_SIGN
 
 	}
 
-	class Decimal(size : Int = 10, decimals : Int = 0, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : DecimalSqlType(size, decimals, "DECIMAL")
+	class Decimal @JvmOverloads constructor(size : Int = 10, decimals : Int = 0, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : DecimalSqlType(size, decimals, "DECIMAL")
 	//endregion
 
 
 	//region Character Types
-	class VarChar(size: Int, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SizedSqlType(size, "VARCHAR")
+	class VarChar @JvmOverloads constructor(size: Int, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SizedSqlType(size, "VARCHAR")
 
-	class Char(size: Int, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SizedSqlType(size, "CHAR")
+	class Char @JvmOverloads constructor(size: Int, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SizedSqlType(size, "CHAR")
 	//endregion
 
 
 	//region Misc Types
-	class Bool(override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SqlType("BOOLEAN")
+	class Bool @JvmOverloads constructor(override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SqlType("BOOLEAN")
 
-    class EnumSet<E: Enum<E>>(val enumClass: KClass<E>, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SqlType("ENUM") {
+    class EnumSet<E: Enum<E>> @JvmOverloads constructor(val enumClass: KClass<E>, override val primaryKey: Boolean = false, override val notNull: Boolean = true) : SqlType("ENUM") {
 
 		override fun toString() : String {
 			val constants = enumClass.java.enumConstants.joinToString(", ") { "'$it'" }

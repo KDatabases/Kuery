@@ -2,10 +2,9 @@ package com.sxtanna.tests
 
 import com.sxtanna.database.Kuery
 import com.sxtanna.database.ext.co
-import com.sxtanna.database.struct.Duplicate
 import com.sxtanna.database.struct.SqlType.Char
+import com.sxtanna.database.struct.SqlType.VarChar
 import java.io.File
-import java.util.*
 
 class KueryTests(file: File) {
 
@@ -16,8 +15,7 @@ class KueryTests(file: File) {
 	fun disable() = kuery.disable()
 
 	fun runTest() = kuery {
-		createTable("Table", "ID" co Char(36))
-		insert("Table", arrayOf("ID" co UUID.fromString("")), Duplicate.Update("ID"))
+		createTable("Table", "UUID" co Char(36, true), "Name" co VarChar(36))
 	}
 
 }
