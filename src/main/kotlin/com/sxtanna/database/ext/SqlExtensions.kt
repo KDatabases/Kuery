@@ -1,15 +1,24 @@
 package com.sxtanna.database.ext
 
-import com.sxtanna.database.struct.Column
+import com.sxtanna.database.struct.Duo
 import java.sql.ResultSet
+import java.util.*
 
 /**
- * Special infix function for [Column]
+ * Special infix function for [Duo]
  *
- * @param value The value to create with this Column
+ * @param value The value to create with this Duo
  * @sample createColumns
  */
-infix fun <T : Any> String.co(value : T) = Column(this, value)
+infix fun <T : Any> String.co(value : T) = Duo(this, value)
+
+/**
+ * Convenience method for reading a UUID from a ResultSet
+ *
+ * @param column The column name
+ * @return The UUID read from the column
+ */
+fun ResultSet.getUniqueID(column : String) : UUID = UUID.fromString(getString(column))
 
 /**
  * Invoke this block for every result in this set
@@ -35,8 +44,8 @@ fun <O> ResultSet.mapWhileNext(mapper: ResultSet.() -> O): List<O> {
 }
 
 
-private fun createColumns() : Array<Column<Any>> {
-	return Column.valueColumns("One" co 1, "Two" co 2, "True" co true)
+private fun createColumns() : Array<Duo<Any>> {
+	return Duo.valueColumns("One" co 1, "Two" co 2, "True" co true)
 }
 
 private fun getUserNames(resultSet : ResultSet) {

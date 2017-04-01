@@ -5,10 +5,13 @@ import com.sxtanna.database.config.DatabaseConfig
 import com.sxtanna.database.config.DatabaseConfigManager
 import com.sxtanna.database.config.KueryConfig
 import com.sxtanna.database.task.KueryTask
+import com.sxtanna.database.type.SqlObject
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.io.File
 import java.sql.Connection
+import java.sql.ResultSet
+import kotlin.reflect.KClass
 
 class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfig, KueryTask>() {
 
@@ -16,6 +19,7 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 	lateinit var pool : HikariDataSource
 		private set
 
+	val creators = mutableMapOf<KClass<out SqlObject>, ResultSet.() -> SqlObject>()
 
 	override fun load() {
 		val hikariConfig = HikariConfig().apply {
@@ -31,12 +35,17 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 		pool = HikariDataSource(hikariConfig)
 	}
 
-	override fun poison() = pool.close()
+	override fun poison() = pool.close().also { creators.clear() }
 
 
 	override fun poolResource() : Connection? = pool.connection
 
-	override fun createTask(resource : Connection) : KueryTask = KueryTask(resource)
+	override fun createTask(resource : Connection) : KueryTask = KueryTask(this, resource)
+
+
+	inline fun <reified T : SqlObject> addCreator(noinline creator : ResultSet.() -> T) {
+		creators[T::class] = creator
+	}
 
 
 	companion object : DatabaseConfigManager<KueryConfig, Kuery> {

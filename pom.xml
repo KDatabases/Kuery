@@ -5,13 +5,13 @@
     <parent>
         <artifactId>Super</artifactId>
         <groupId>com.sxtanna.database</groupId>
-        <version>1.0</version>
+        <version>1.1</version>
         <relativePath>../Super/pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>Kuery</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>${project.artifactId}</name>
@@ -33,6 +33,21 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>${versionHikari}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${versionSlf4jSimple}</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${versionMySQLConnector}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-reflect</artifactId>
+            <version>${versionKotlin}</version>
         </dependency>
     </dependencies>
 
