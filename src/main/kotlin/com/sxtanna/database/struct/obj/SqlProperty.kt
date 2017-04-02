@@ -5,6 +5,7 @@ import com.sxtanna.database.struct.SqlType
 import com.sxtanna.database.struct.SqlType.*
 import com.sxtanna.database.struct.SqlType.EnumSet
 import com.sxtanna.database.struct.obj.base.*
+import java.sql.Timestamp
 import java.util.*
 import kotlin.Byte
 import kotlin.Double
@@ -31,13 +32,21 @@ object SqlProperty {
 		adapters[Char::class] = { SqlType.Char(1, isPrimaryKey(), isNotNull()) }
 		adapters[UUID::class] = { SqlType.Char(36, isPrimaryKey(), isNotNull()) }
 
-		adapters[Enum::class] = { EnumSet(returnType.jvmErasure as KClass<out Enum<*>>, isPrimaryKey(), isNotNull()) }
+		adapters[Enum::class] = {
+			val serialized = findAnnotation<Serialized>() != null
+			if (serialized) VarChar(VARCHAR_SIZE, isPrimaryKey(), isNotNull()) else EnumSet(returnType.jvmErasure as KClass<out Enum<*>>, isPrimaryKey(), isNotNull())
+		}
 		adapters[String::class] = { VarChar(findAnnotation<Size>()?.length ?: VARCHAR_SIZE, isPrimaryKey(), isNotNull()) }
 
+		adapters[Timestamp::class] = {
+			val time = findAnnotation<Time>()
+			SqlType.Timestamp(time?.current ?: false, time?.updating ?: false, isPrimaryKey(), isNotNull())
+		}
 
-		val numberAdapter : KProperty1<*, *>.() -> SqlType = {
+
+		val numberAdapter : KProperty1<*, *>.() -> SqlType = Out@ {
 			val size = findAnnotation<Size>()?.length ?: 100
-			when(findAnnotation<IntType>()?.value ?: TinyInt::class) {
+			when(findAnnotation<IntType>()?.value ?: NormInt::class) {
 				TinyInt::class -> TinyInt(size, isUnsigned(), isPrimaryKey(), isNotNull())
 				SmallInt::class -> SmallInt(size, isUnsigned(), isPrimaryKey(), isNotNull())
 				MediumInt::class -> MediumInt(size, isUnsigned(), isPrimaryKey(), isNotNull())

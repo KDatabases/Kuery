@@ -116,6 +116,26 @@ sealed class SqlType(val name : String) {
 		}
 
 	}
+
+	class Timestamp @JvmOverloads constructor(val current : Boolean = false, val updating : Boolean = false, override val primaryKey : Boolean = false, override val notNull : Boolean = true) : SqlType("TIMESTAMP") {
+
+		override fun toString() : String {
+			var base = super.toString()
+			if (current) base += CURRENT
+			if (updating) base += "${if (current.not()) CURRENT else ""}$UPDATE"
+
+			return base
+		}
+
+
+		companion object {
+
+			const val UPDATE = " ON UPDATE CURRENT_TIMESTAMP"
+			const val CURRENT = " DEFAULT CURRENT_TIMESTAMP"
+
+		}
+
+	}
 	//endregion
 
 }
