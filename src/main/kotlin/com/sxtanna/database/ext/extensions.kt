@@ -1,6 +1,7 @@
 package com.sxtanna.database.ext
 
 import com.sxtanna.database.struct.Duo
+import java.math.BigInteger
 import java.sql.ResultSet
 import java.util.*
 
@@ -12,6 +13,7 @@ import java.util.*
  */
 infix fun <T : Any> String.co(value : T) = Duo(this, value)
 
+
 /**
  * Convenience method for reading a UUID from a ResultSet
  *
@@ -19,6 +21,14 @@ infix fun <T : Any> String.co(value : T) = Duo(this, value)
  * @return The UUID read from the column
  */
 fun ResultSet.getUniqueID(column : String) : UUID = UUID.fromString(getString(column))
+
+/**
+ * Convenience method for reading a UUID from a ResultSet
+ *
+ * @param column The column name
+ * @return The UUID read from the column
+ */
+fun ResultSet.getBigInteger(column : String) : BigInteger = BigInteger(getString(column))
 
 /**
  * Invoke this block for every result in this set

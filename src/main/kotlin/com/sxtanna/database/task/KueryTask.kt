@@ -5,17 +5,17 @@ import com.sxtanna.database.ext.ALL_ROWS
 import com.sxtanna.database.ext.co
 import com.sxtanna.database.ext.mapWhileNext
 import com.sxtanna.database.struct.*
-import com.sxtanna.database.struct.Duplicate.Ignore
-import com.sxtanna.database.struct.Duplicate.Update
-import com.sxtanna.database.struct.Sort.Ascend
-import com.sxtanna.database.struct.Sort.Descend
-import com.sxtanna.database.struct.Sort.Type.Ascending
-import com.sxtanna.database.struct.Sort.Type.Descending
-import com.sxtanna.database.struct.Where.Like
-import com.sxtanna.database.struct.Where.Like.LikeOption
-import com.sxtanna.database.struct.Where.Like.LikeOption.*
-import com.sxtanna.database.struct.obj.SqlProperty
-import com.sxtanna.database.struct.obj.base.PrimaryKey
+import com.sxtanna.database.struct.obj.Duplicate.Ignore
+import com.sxtanna.database.struct.obj.Duplicate.Update
+import com.sxtanna.database.struct.obj.Sort.Ascend
+import com.sxtanna.database.struct.obj.Sort.Descend
+import com.sxtanna.database.struct.obj.Sort.Type.Ascending
+import com.sxtanna.database.struct.obj.Sort.Type.Descending
+import com.sxtanna.database.struct.obj.Where.Like
+import com.sxtanna.database.struct.obj.Where.Like.LikeOption
+import com.sxtanna.database.struct.obj.Where.Like.LikeOption.*
+import com.sxtanna.database.struct.SqlProperty
+import com.sxtanna.database.struct.obj.*
 import com.sxtanna.database.type.SqlObject
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -56,7 +56,7 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		resultSet.handler()
 	}
 
-	fun insert(table : String, columns : Array<Duo<Any>>, duplicateKey : Duplicate? = null) {
+	fun insert(table : String, vararg columns : Duo<Any>, duplicateKey : Duplicate? = null) {
 		val insertStatement = "Insert Into $table (${columns.map { it.name }.joinToString(", ")}) Values (${Array(columns.size, { "?" }).joinToString(", ")}) ${duplicateKey?.invoke(columns[0].name) ?: ""}"
 
 		preparedStatement = resource.prepareStatement(insertStatement)
@@ -81,6 +81,10 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	}
 
 
+	fun createTable(name : String, block : CreateBuilder.() -> Unit) {
+		CreateBuilder(name).apply(block).invoke()
+	}
+
 	inline fun <reified T : SqlObject> createTable(name : String = T::class.simpleName!!) {
 		val columns : Array<Duo<SqlType>> = T::class.memberProperties.map { Duo(it.name, SqlProperty[it]) }.toTypedArray()
 		createTable(name, *columns)
@@ -94,6 +98,10 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		return InsertBuilder(T::class, table)
 	}
 
+	operator fun CreateBuilder.invoke() {
+		createTable(table, *columns.toTypedArray())
+	}
+
 	operator fun <T : SqlObject> SelectBuilder<T>.invoke(handler : T.() -> Unit) {
 		select(table, ALL_ROWS, where().toTypedArray(), sorts().toTypedArray()) {
 			val creator = checkNotNull(kuery.creators[clazz] as? ResultSet.() -> T) { "Creator for type $clazz doesn't exist" }
@@ -103,9 +111,19 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 
 	operator fun <T : SqlObject> InsertBuilder<T>.invoke(obj : T) {
 		val columns = clazz.memberProperties.map { it.name co it.get(obj)!! }.toTypedArray()
-		insert(table, columns, if (ignore) Ignore() else if (update.isNotEmpty()) Update(*update) else null)
+		insert(table, *columns, duplicateKey = if (ignore) Ignore() else if (update.isNotEmpty()) Update(*update) else null)
 	}
 
+
+	class CreateBuilder(val table : String) {
+
+		val columns = mutableListOf<Duo<SqlType>>()
+
+		fun col(name : String, type : SqlType) = (name co type).apply { columns.add(this) }
+
+		fun col(name : String, type : () -> SqlType) = (name co type()).apply { columns.add(this) }
+
+	}
 
 	class SelectBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
 

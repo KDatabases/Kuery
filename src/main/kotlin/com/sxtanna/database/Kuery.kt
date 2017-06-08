@@ -30,6 +30,18 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 			connectionTimeout = config.pool.timeout.toLong()
 			idleTimeout = config.pool.idle.toLong()
 			isAutoCommit = true
+
+			addDataSourceProperty("cachePrepStmts", true)
+			addDataSourceProperty("prepStmtCacheSize", 250)
+			addDataSourceProperty("serverTimezone", "EST5EDT")
+			addDataSourceProperty("prepStmtCacheSqlLimit", 2048)
+			addDataSourceProperty("useServerPrepStmts", true)
+			addDataSourceProperty("cacheCallableStmts", true)
+			addDataSourceProperty("elideSetAutoCommits", true)
+			addDataSourceProperty("useLocalSessionState", true)
+			addDataSourceProperty("alwaysSendSetIsolation", true)
+			addDataSourceProperty("cacheResultSetMetadata", true)
+			addDataSourceProperty("cacheServerConfiguration", true)
 		}
 
 		pool = HikariDataSource(hikariConfig)

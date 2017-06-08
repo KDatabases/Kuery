@@ -1,5 +1,9 @@
 package com.sxtanna.database.ext
 
+/**
+ * Implement data validation for clientside failing
+ */
+
 const val MIN_UNSIGN = 0L
 
 const val TINY_MAX_SIGN = Byte.MAX_VALUE.toLong()
@@ -18,6 +22,9 @@ const val NORM_MAX_SIGN = Int.MAX_VALUE.toLong()
 const val NORM_MIN_SIGN = Int.MIN_VALUE.toLong()
 const val NORM_MAX_UNSIGN = 4294967295L
 
+const val BIG_MAX_SIGN = "9223372036854775807"
+const val BIG_MIN_SIGN = "-9223372036854775808"
+const val BIG_MAX_UNSIGNED = "18446744073709551615"
 
 const val VARCHAR_SIZE = 255
 

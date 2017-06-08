@@ -4,7 +4,6 @@ import java.sql.PreparedStatement
 
 data class Value(val data: Any, val name: String = "") {
 
-
     fun prepare(prep: PreparedStatement, position: Int) {
         when(data) {
 			is Byte -> prep.setByte(position, data)

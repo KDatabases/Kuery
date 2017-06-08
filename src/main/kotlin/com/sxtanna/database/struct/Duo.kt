@@ -1,5 +1,7 @@
 package com.sxtanna.database.struct
 
+import com.sxtanna.database.struct.obj.SqlType
+
 data class Duo<out T : Any>(val name : String, val value : T) {
 
 
