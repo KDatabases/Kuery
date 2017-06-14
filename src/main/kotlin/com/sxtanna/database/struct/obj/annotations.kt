@@ -1,6 +1,13 @@
 package com.sxtanna.database.struct.obj
 
 import com.sxtanna.database.struct.obj.SqlType.*
+import com.sxtanna.database.struct.obj.SqlType.Char
+import java.lang.Byte
+import java.lang.Double
+import java.lang.Float
+import java.lang.Long
+import java.lang.Short
+import java.lang.String
 import java.math.BigInteger
 import java.sql.Timestamp
 import kotlin.annotation.AnnotationRetention.RUNTIME
@@ -12,6 +19,8 @@ import kotlin.reflect.KClass
  * Use the type [Char] instead of [VarChar], and use this length
  *
  * **Applicable on [String]**
+ *
+ * **Max Length is 255**
  */
 @Retention(RUNTIME)
 @Target(PROPERTY, FIELD)
@@ -32,6 +41,21 @@ annotation class Fixed(val length : Int)
 @Retention(RUNTIME)
 @Target(PROPERTY, FIELD)
 annotation class IntType(val value : KClass<out WholeNumberSqlType<*>>)
+
+/**
+ * Instructs the resolver to use a specific type of text server side
+ *
+ * **Valid types are**
+ *   - [TinyText]
+ *   - [MediumText]
+ *   - [Text]
+ *   - [LongText]
+ *
+ * **Applicable on [String], [Any]**
+ */
+@Retention(RUNTIME)
+@Target(PROPERTY, FIELD)
+annotation class TextType(val value : KClass<out TextSqlType>)
 
 /**
  * Mark this field as Nullable server side
@@ -81,7 +105,7 @@ annotation class Time(val current : Boolean = false, val updating : Boolean = fa
 /**
  * Specify that this number should be Unsigned
  *
- * **Applicable on [Byte], [Short], [Int], and [Long]**
+ * **Applicable on [Byte], [Short], [Int], and [Long], [BigInteger]**
  */
 @Retention(RUNTIME)
 @Target(PROPERTY, FIELD)

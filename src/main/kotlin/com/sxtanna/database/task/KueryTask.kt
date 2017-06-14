@@ -5,7 +5,7 @@ import com.sxtanna.database.ext.ALL_ROWS
 import com.sxtanna.database.ext.co
 import com.sxtanna.database.ext.mapWhileNext
 import com.sxtanna.database.struct.Duo
-import com.sxtanna.database.struct.SqlProperty
+import com.sxtanna.database.struct.Resolver
 import com.sxtanna.database.struct.Value
 import com.sxtanna.database.struct.obj.*
 import com.sxtanna.database.struct.obj.Duplicate.Ignore
@@ -61,7 +61,7 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		resultSet.handler()
 	}
 
-	fun insert(table : String, vararg columns : Duo<Any>, duplicateKey : Duplicate? = null) {
+	fun insert(table : String, vararg columns : Duo<Any?>, duplicateKey : Duplicate? = null) {
 		val insertStatement = "Insert Into $table (${columns.map { it.name }.joinToString(", ")}) Values (${Array(columns.size, { "?" }).joinToString(", ")}) ${duplicateKey?.invoke(columns[0].name) ?: ""}"
 
 		preparedStatement = resource.prepareStatement(insertStatement)
@@ -72,7 +72,7 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		preparedStatement.execute()
 	}
 
-	fun update(table : String, columns : Array<Duo<Any>>, vararg where : Where = emptyArray()) {
+	fun update(table : String, columns : Array<Duo<Any?>>, vararg where : Where = emptyArray()) {
 		val updateStatement = "Update $table Set ${columns.map { "${it.name} = ?" }.joinToString(", ")}${if (where.isNotEmpty()) " Where ${where.map(Where::toString).joinToString(" AND ")}" else ""}"
 
 		preparedStatement = resource.prepareStatement(updateStatement)
@@ -95,17 +95,15 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	}
 
 	inline fun <reified T : SqlObject> createTable(name : String = T::class.simpleName!!) {
-		val columns : Array<Duo<SqlType>> = T::class.memberProperties.map { Duo(it.name, SqlProperty[it]) }.toTypedArray()
+		val columns : Array<Duo<SqlType>> = T::class.memberProperties.map { Duo(it.name, Resolver[it]) }.toTypedArray()
 		createTable(name, *columns)
 	}
 
-	inline fun <reified T : SqlObject> select(table : String = T::class.simpleName!!) : SelectBuilder<T> {
-		return SelectBuilder(T::class, table)
-	}
+	inline fun <reified T : SqlObject> select(table : String = T::class.simpleName!!) = SelectBuilder(T::class, table)
 
-	inline fun <reified T : SqlObject> insert(table : String = T::class.simpleName!!) : InsertBuilder<T> {
-		return InsertBuilder(T::class, table)
-	}
+	inline fun <reified T : SqlObject> insert(table : String = T::class.simpleName!!) = InsertBuilder(T::class, table)
+
+	inline fun <reified T : SqlObject> update(table : String = T::class.simpleName!!) = UpdateBuilder(T::class, table)
 
 	operator fun CreateBuilder.invoke() {
 		createTable(table, *columns.toTypedArray())
@@ -119,8 +117,13 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	}
 
 	operator fun <T : SqlObject> InsertBuilder<T>.invoke(obj : T) {
-		val columns = clazz.memberProperties.map { it.name co it.get(obj)!! }.toTypedArray()
+		val columns = clazz.memberProperties.map { it.name co it.get(obj) }.toTypedArray()
 		insert(table, *columns, duplicateKey = if (ignore) Ignore() else if (update.isNotEmpty()) Update(*update) else null)
+	}
+
+	operator fun <T : SqlObject> UpdateBuilder<T>.invoke(obj : T) {
+		val columns = clazz.memberProperties.filterNot { it.name.toLowerCase() in ignoring }.map { it.name co it.get(obj) }.toTypedArray()
+		update(table, columns, Where.Equals(primary.name, checkNotNull(primary.get(obj)) { "Primary key data cannot be null" }))
 	}
 
 
@@ -134,15 +137,15 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 
 	}
 
-	class SelectBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
+	open class SelectBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
 
-		private val where = mutableListOf<Where>()
 		private val sorts = mutableListOf<Sort>()
+		private val where = mutableListOf<Where>()
 
-
-		fun where() : List<Where> = where
 
 		fun sorts() : List<Sort> = sorts
+
+		fun where() : List<Where> = where
 
 
 		fun like(column : String, value : Any, option : LikeOption, not : Boolean = false) : SelectBuilder<T> {
@@ -219,6 +222,25 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 
 			inline fun <reified T : SqlObject> new(table : String = T::class.simpleName!!) = InsertBuilder(T::class, table)
 
+		}
+
+	}
+
+	open class UpdateBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
+
+		val primary = checkNotNull(clazz.memberProperties.find { it.findAnnotation<PrimaryKey>() != null }) {
+			"Cannot update object without primary key"
+		}
+		val ignoring = mutableSetOf<String>()
+
+		init {
+			ignoring.add(primary.name.toLowerCase())
+		}
+
+
+		fun ignore(vararg column : String) : UpdateBuilder<T> {
+			ignoring.addAll(column.map { it.toLowerCase() })
+			return this
 		}
 
 	}

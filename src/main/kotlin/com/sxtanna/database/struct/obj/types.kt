@@ -2,6 +2,14 @@ package com.sxtanna.database.struct.obj
 
 import com.sxtanna.database.struct.obj.Sort.Type.Ascending
 import com.sxtanna.database.struct.obj.Sort.Type.Descending
+import kotlin.Byte
+import kotlin.Double
+import kotlin.Enum
+import kotlin.Float
+import kotlin.Int
+import kotlin.Long
+import kotlin.Short
+import kotlin.String
 import java.math.BigInteger
 import java.sql.PreparedStatement
 import kotlin.reflect.KClass
@@ -18,6 +26,8 @@ sealed class SqlType(val name : String) {
 
 
 	//region Base Types
+	abstract class TextSqlType(name : String) : SqlType(name)
+
 	abstract class SizedSqlType<N>(val size : N, name : String) : SqlType(name) where N : Number, N : Comparable<N> {
 
 		override fun name() : String = "$name(${size()})"
@@ -100,6 +110,15 @@ sealed class SqlType(val name : String) {
 	 * A Variable length [String], up to 255 characters
 	 */
 	class VarChar @JvmOverloads constructor(size : Int, override var primaryKey : Boolean = false, override var notNull : Boolean = true) : SizedSqlType<Long>(size.toLong(), "VARCHAR")
+
+	class Text @JvmOverloads constructor(override var primaryKey : Boolean = false, override var notNull : Boolean = true) : TextSqlType("TEXT")
+
+	class TinyText @JvmOverloads constructor(override var primaryKey : Boolean = false, override var notNull : Boolean = true) : TextSqlType("TINYTEXT")
+
+	class MediumText @JvmOverloads constructor(override var primaryKey : Boolean = false, override var notNull : Boolean = true) : TextSqlType("MEDIUMTEXT")
+
+	class LongText @JvmOverloads constructor(override var primaryKey : Boolean = false, override var notNull : Boolean = true) : TextSqlType("LONGTEXT")
+
 	//endregion
 
 	//region Misc Types

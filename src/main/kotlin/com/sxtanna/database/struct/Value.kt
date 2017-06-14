@@ -1,8 +1,10 @@
 package com.sxtanna.database.struct
 
+import com.sxtanna.database.ext.gson
+import com.sxtanna.database.type.JsonObject
 import java.sql.PreparedStatement
 
-data class Value(val data: Any, val name: String = "") {
+data class Value(val data: Any?, val name: String = "") {
 
     fun prepare(prep: PreparedStatement, position: Int) {
         when(data) {
@@ -12,7 +14,7 @@ data class Value(val data: Any, val name: String = "") {
 			is Long -> prep.setLong(position, data)
             is Double -> prep.setDouble(position, data)
             is String -> prep.setString(position, data)
-            else -> prep.setString(position, data.toString())
+            else -> prep.setString(position, if (data is JsonObject) gson.toJson(data) else data?.toString())
         }
     }
 

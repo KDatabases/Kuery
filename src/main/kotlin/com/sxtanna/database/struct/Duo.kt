@@ -2,7 +2,7 @@ package com.sxtanna.database.struct
 
 import com.sxtanna.database.struct.obj.SqlType
 
-data class Duo<out T : Any>(val name : String, val value : T) {
+data class Duo<out T>(val name : String, val value : T) {
 
 
 	companion object {

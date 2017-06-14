@@ -1,7 +1,7 @@
 package com.sxtanna.database.ext
 
-import com.sxtanna.database.config.DatabaseConfig
 import com.sxtanna.database.struct.Duo
+import com.sxtanna.database.type.JsonObject
 import java.math.BigInteger
 import java.sql.ResultSet
 import java.util.*
@@ -12,7 +12,7 @@ import java.util.*
  * @param value The value to create with this Duo
  * @sample createColumns
  */
-infix fun <T : Any> String.co(value : T) = Duo(this, value)
+infix fun <T> String.co(value : T) = Duo(this, value)
 
 
 /**
@@ -37,7 +37,7 @@ fun ResultSet.getBigInteger(column : String) : BigInteger = BigInteger(getString
  * @param column The column name
  * @return The Object read from the column
  */
-inline fun <reified E : Any> ResultSet.getJson(column : String) : E {
+inline fun <reified E : JsonObject> ResultSet.getJson(column : String) : E {
 	return gson.fromJson(getString(column), E::class.java)
 }
 
