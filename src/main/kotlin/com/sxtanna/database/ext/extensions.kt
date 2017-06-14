@@ -1,5 +1,6 @@
 package com.sxtanna.database.ext
 
+import com.sxtanna.database.config.DatabaseConfig
 import com.sxtanna.database.struct.Duo
 import java.math.BigInteger
 import java.sql.ResultSet
@@ -29,6 +30,17 @@ fun ResultSet.getUniqueID(column : String) : UUID = UUID.fromString(getString(co
  * @return The UUID read from the column
  */
 fun ResultSet.getBigInteger(column : String) : BigInteger = BigInteger(getString(column))
+
+/**
+ * Convenience method for reading Objects from a Json String
+ *
+ * @param column The column name
+ * @return The Object read from the column
+ */
+inline fun <reified E : Any> ResultSet.getJson(column : String) : E {
+	return gson.fromJson(getString(column), E::class.java)
+}
+
 
 /**
  * Invoke this block for every result in this set

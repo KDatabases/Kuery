@@ -1,7 +1,7 @@
 package com.sxtanna.database.ext
 
 /**
- * Implement data validation for clientside failing
+ * Implement data validation for client side failing
  */
 
 const val MIN_UNSIGN = 0L

@@ -1,9 +1,9 @@
 package com.sxtanna.database
 
 import com.sxtanna.database.base.Database
-import com.sxtanna.database.config.DatabaseConfig
 import com.sxtanna.database.config.DatabaseConfigManager
 import com.sxtanna.database.config.KueryConfig
+import com.sxtanna.database.ext.loadOrSave
 import com.sxtanna.database.task.KueryTask
 import com.sxtanna.database.type.SqlObject
 import com.zaxxer.hikari.HikariConfig
@@ -19,6 +19,7 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 	lateinit var pool : HikariDataSource
 		private set
 
+	val debug get() = config.debug ?: false
 	val creators = mutableMapOf<KClass<out SqlObject>, ResultSet.() -> SqlObject>()
 
 	override fun load() {
@@ -66,9 +67,8 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 		override fun get(file : File) : Kuery = Kuery(getConfig(file))
 
 		@JvmStatic
-		override fun getConfig(file : File) : KueryConfig {
-			return DatabaseConfig.loadOrSave(file, KueryConfig.DEFAULT)
-		}
+		override fun getConfig(file : File) = file.loadOrSave(KueryConfig.DEFAULT)
+
 	}
 
 }

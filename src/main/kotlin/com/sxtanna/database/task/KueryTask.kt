@@ -4,7 +4,10 @@ import com.sxtanna.database.Kuery
 import com.sxtanna.database.ext.ALL_ROWS
 import com.sxtanna.database.ext.co
 import com.sxtanna.database.ext.mapWhileNext
-import com.sxtanna.database.struct.*
+import com.sxtanna.database.struct.Duo
+import com.sxtanna.database.struct.SqlProperty
+import com.sxtanna.database.struct.Value
+import com.sxtanna.database.struct.obj.*
 import com.sxtanna.database.struct.obj.Duplicate.Ignore
 import com.sxtanna.database.struct.obj.Duplicate.Update
 import com.sxtanna.database.struct.obj.Sort.Ascend
@@ -14,8 +17,6 @@ import com.sxtanna.database.struct.obj.Sort.Type.Descending
 import com.sxtanna.database.struct.obj.Where.Like
 import com.sxtanna.database.struct.obj.Where.Like.LikeOption
 import com.sxtanna.database.struct.obj.Where.Like.LikeOption.*
-import com.sxtanna.database.struct.SqlProperty
-import com.sxtanna.database.struct.obj.*
 import com.sxtanna.database.type.SqlObject
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -34,6 +35,8 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	fun createTable(name : String, vararg columns : Duo<SqlType>) {
 		val createStatement = "Create Table If Not Exists $name ${columns.map { "${it.name} ${it.value}" }.joinToString(", ", "(", ")")}"
 
+		if (kuery.debug) println("Create '$createStatement'")
+
 		preparedStatement = resource.prepareStatement(createStatement)
 		preparedStatement.execute()
 	}
@@ -50,6 +53,8 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 			if (where is Where.Between) offSet++
 		}
 
+		if (kuery.debug) println("Select '$selectStatement'")
+
 		resultSet = preparedStatement.executeQuery()
 
 		if (preCheck && resultSet.next().not()) return
@@ -61,6 +66,8 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 
 		preparedStatement = resource.prepareStatement(insertStatement)
 		columns.forEachIndexed { i, value -> Value(value.value).prepare(preparedStatement, i + 1) }
+
+		if (kuery.debug) println("Insert '$insertStatement'")
 
 		preparedStatement.execute()
 	}
@@ -76,6 +83,8 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 			where.prepare(preparedStatement, i + 1 + offSet)
 			if (where is Where.Between) offSet++
 		}
+
+		if (kuery.debug) println("Update '$updateStatement'")
 
 		preparedStatement.executeUpdate()
 	}
