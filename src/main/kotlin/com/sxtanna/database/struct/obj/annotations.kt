@@ -2,12 +2,6 @@ package com.sxtanna.database.struct.obj
 
 import com.sxtanna.database.struct.obj.SqlType.*
 import com.sxtanna.database.struct.obj.SqlType.Char
-import java.lang.Byte
-import java.lang.Double
-import java.lang.Float
-import java.lang.Long
-import java.lang.Short
-import java.lang.String
 import java.math.BigInteger
 import java.sql.Timestamp
 import kotlin.annotation.AnnotationRetention.RUNTIME

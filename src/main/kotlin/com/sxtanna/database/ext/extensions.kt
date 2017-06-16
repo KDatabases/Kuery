@@ -1,3 +1,4 @@
+@file:JvmName("Kext")
 package com.sxtanna.database.ext
 
 import com.sxtanna.database.struct.Duo
@@ -48,7 +49,7 @@ inline fun <reified E : JsonObject> ResultSet.getJson(column : String) : E {
  * @param block The action
  * @sample sayUserNames
  */
-fun ResultSet.whileNext(block: ResultSet.() -> Unit) {
+inline fun ResultSet.whileNext(block: ResultSet.() -> Unit) {
 	while (this.next()) this.block()
 }
 
@@ -58,7 +59,7 @@ fun ResultSet.whileNext(block: ResultSet.() -> Unit) {
  * @param mapper The result mapper
  * @sample getUserNames
  */
-fun <O> ResultSet.mapWhileNext(mapper: ResultSet.() -> O): List<O> {
+inline fun <O> ResultSet.mapWhileNext(mapper: ResultSet.() -> O): List<O> {
 	val output = mutableListOf<O>()
 	this.whileNext { output.add(this.mapper()) }
 

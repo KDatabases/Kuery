@@ -12,6 +12,7 @@ import com.sxtanna.database.task.KueryTask.InsertBuilder.Insert
 import com.sxtanna.database.task.KueryTask.SelectBuilder.Select
 import com.sxtanna.database.type.JsonObject
 import com.sxtanna.database.type.SqlObject
+import com.sxtanna.tests.Thing.First
 import java.io.File
 import java.math.BigInteger
 import java.util.*
@@ -29,6 +30,7 @@ class KueryTests(file: File) {
 		kuery.addCreator { Test(getBigInteger("size")) }
 		kuery.addCreator { Account(getUniqueID("id"), getDouble("balance"), getInt("count")) }
 		kuery.addCreator { JsonTest(getInt("id"), getString("name"), getJson("data")) }
+		kuery.addCreator { EnumTest(getInt("id"), Thing.valueOf(getString("thing"))) }
 
 		createTable<Test>()
 
@@ -69,9 +71,16 @@ class KueryTests(file: File) {
 			println(data.things)
 		}
 
-
 		map["Hello"] = "World"
 		update<JsonTest>().ignore("name")(JsonTest(2, "World", JsonData(map)))
+
+
+		createTable<EnumTest>()
+		insert<EnumTest>().onDupeUpdate().invoke(EnumTest(1, First))
+
+		select<EnumTest>().equalTo("id", 1).invoke {
+			println("Thing is $thing")
+		}
 	}
 
 
@@ -86,6 +95,16 @@ class KueryTests(file: File) {
 		val select500Plus = Select.new<Account>().greaterThan("balance", 500.0, true).ascend("balance")
 
 	}
+
+}
+
+
+data class EnumTest(@PrimaryKey val id : Int, @Serialized val thing : Thing) : SqlObject
+
+enum class Thing {
+
+	First,
+	Second
 
 }
 

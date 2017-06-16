@@ -16,6 +16,7 @@ import kotlin.String
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.jvmErasure
 
 object Resolver {
@@ -86,7 +87,12 @@ object Resolver {
 	}
 
 
-	operator fun get(property : KProperty1<*, *>) : SqlType = (adapters[property.returnType.jvmErasure] ?: adapters[Any::class]!!).invoke(property)
+	operator fun get(property : KProperty1<*, *>) : SqlType {
+		val type = property.returnType.jvmErasure
+		if (type.isSubclassOf(Enum::class)) return adapters[Enum::class]!!.invoke(property)
+
+		return (adapters[property.returnType.jvmErasure] ?: adapters[Any::class]!!).invoke(property)
+	}
 
 
 	private fun KProperty1<*, *>.isNotNull() = findAnnotation<Nullable>() == null && returnType.isMarkedNullable.not()
