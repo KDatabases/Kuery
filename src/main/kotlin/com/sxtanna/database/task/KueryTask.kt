@@ -62,7 +62,7 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	}
 
 	fun insert(table : String, vararg columns : Duo<Any?>, duplicateKey : Duplicate? = null) {
-		val insertStatement = "Insert Into $table (${columns.map { it.name }.joinToString(", ")}) Values (${Array(columns.size, { "?" }).joinToString(", ")}) ${duplicateKey?.invoke(columns[0].name) ?: ""}"
+		val insertStatement = "Insert Into $table (${columns.map { it.name }.joinToString()}) Values (${Array(columns.size, { "?" }).joinToString()}) ${duplicateKey?.invoke(columns[0].name) ?: ""}"
 
 		preparedStatement = resource.prepareStatement(insertStatement)
 		columns.forEachIndexed { i, value -> Value(value.value).prepare(preparedStatement, i + 1) }
@@ -73,7 +73,7 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	}
 
 	fun update(table : String, columns : Array<Duo<Any?>>, vararg where : Where = emptyArray()) {
-		val updateStatement = "Update $table Set ${columns.map { "${it.name} = ?" }.joinToString(", ")}${if (where.isNotEmpty()) " Where ${where.map(Where::toString).joinToString(" AND ")}" else ""}"
+		val updateStatement = "Update $table Set ${columns.map { "${it.name} = ?" }.joinToString()}${if (where.isNotEmpty()) " Where ${where.joinToString(" AND ")}" else ""}"
 
 		preparedStatement = resource.prepareStatement(updateStatement)
 		columns.forEachIndexed { i, value -> Value(value.value).prepare(preparedStatement, i + 1) }
@@ -85,6 +85,24 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		}
 
 		if (kuery.debug) println("Update '$updateStatement'")
+
+		preparedStatement.executeUpdate()
+	}
+
+	fun remove(table: String, vararg where: Where = emptyArray()) {
+
+		val removeStatement = "Delete From $table Where ${if (where.isNotEmpty()) where.joinToString(" AND ") else ""}"
+
+		preparedStatement = resource.prepareStatement(removeStatement)
+
+		var offSet = 0
+		where.forEachIndexed { i, where ->
+			where.prepare(preparedStatement, i + 1 + offSet)
+			if (where is Where.Between) offSet++
+		}
+
+
+		if (kuery.debug) println("Delete '$removeStatement'")
 
 		preparedStatement.executeUpdate()
 	}
@@ -104,6 +122,9 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 	inline fun <reified T : SqlObject> insert(table : String = T::class.simpleName!!) = InsertBuilder(T::class, table)
 
 	inline fun <reified T : SqlObject> update(table : String = T::class.simpleName!!) = UpdateBuilder(T::class, table)
+
+	inline fun <reified T : SqlObject> remove(table : String = T::class.simpleName!!) = RemoveBuilder(T::class, table)
+
 
 	operator fun CreateBuilder.invoke() {
 		createTable(table, *columns.toTypedArray())
@@ -125,6 +146,8 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 		val columns = clazz.memberProperties.filterNot { it.name.toLowerCase() in ignoring }.map { it.name co it.get(obj) }.toTypedArray()
 		update(table, columns, Where.Equals(primary.name, checkNotNull(primary.get(obj)) { "Primary key data cannot be null" }))
 	}
+
+	operator fun <T : SqlObject> RemoveBuilder<T>.invoke() { remove(table, *where().toTypedArray()) }
 
 
 	class CreateBuilder(val table : String) {
@@ -240,6 +263,48 @@ class KueryTask(val kuery : Kuery, override val resource : Connection) : Databas
 
 		fun ignore(vararg column : String) : UpdateBuilder<T> {
 			ignoring.addAll(column.map { it.toLowerCase() })
+			return this
+		}
+
+	}
+
+	open class RemoveBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
+
+		private val where = mutableListOf<Where>()
+
+
+		fun where() : List<Where> = where
+
+
+		fun like(column : String, value : Any, option : LikeOption, not : Boolean = false) : RemoveBuilder<T> {
+			where.add(Like(column, value, option, not))
+			return this
+		}
+
+		fun startsWith(column : String, value : Any, not : Boolean = false) = like(column, value, Starts, not)
+
+		fun contains(column : String, value : Any, not : Boolean = false) = like(column, value, Contains, not)
+
+		fun endWith(column : String, value : Any, not : Boolean = false) = like(column, value, Ends, not)
+
+
+		fun equalTo(column : String, value : Any) : RemoveBuilder<T> {
+			where.add(Where.Equals(column, value))
+			return this
+		}
+
+		fun between(column : String, first : Any, second : Any, not : Boolean = false) : RemoveBuilder<T> {
+			where.add(Where.Between(column, first, second, not))
+			return this
+		}
+
+		fun lessThan(column : String, value : Any, orEqual : Boolean = false) : RemoveBuilder<T> {
+			where.add(Where.Less(column, value, orEqual))
+			return this
+		}
+
+		fun greaterThan(column : String, value : Any, orEqual : Boolean = false) : RemoveBuilder<T> {
+			where.add(Where.Greater(column, value, orEqual))
 			return this
 		}
 
