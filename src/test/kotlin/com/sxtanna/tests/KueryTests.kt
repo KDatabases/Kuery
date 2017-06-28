@@ -71,6 +71,7 @@ class KueryTests(file: File) {
 			println(data.things)
 		}
 
+
 		map["Hello"] = "World"
 		update<JsonTest>().ignore("name")(JsonTest(2, "World", JsonData(map)))
 
