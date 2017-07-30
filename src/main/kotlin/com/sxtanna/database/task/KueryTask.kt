@@ -1,248 +1,179 @@
 package com.sxtanna.database.task
 
 import com.sxtanna.database.Kuery
-import com.sxtanna.database.ext.ALL_ROWS
-import com.sxtanna.database.ext.co
-import com.sxtanna.database.ext.mapWhileNext
-import com.sxtanna.database.struct.Duo
-import com.sxtanna.database.struct.Resolver
-import com.sxtanna.database.struct.Value
-import com.sxtanna.database.struct.obj.*
+import com.sxtanna.database.ext.*
+import com.sxtanna.database.struct.base.Duo
+import com.sxtanna.database.struct.obj.Duplicate
 import com.sxtanna.database.struct.obj.Duplicate.Ignore
 import com.sxtanna.database.struct.obj.Duplicate.Update
-import com.sxtanna.database.struct.obj.Sort.Ascend
-import com.sxtanna.database.struct.obj.Sort.Descend
-import com.sxtanna.database.struct.obj.Sort.Type.Ascending
-import com.sxtanna.database.struct.obj.Sort.Type.Descending
-import com.sxtanna.database.struct.obj.Where.Like
-import com.sxtanna.database.struct.obj.Where.Like.LikeOption
-import com.sxtanna.database.struct.obj.Where.Like.LikeOption.*
-import com.sxtanna.database.type.SqlObject
+import com.sxtanna.database.struct.obj.Sort
+import com.sxtanna.database.struct.obj.SqlType
+import com.sxtanna.database.struct.obj.Target
+import com.sxtanna.database.task.builder.CreateBuilder
+import com.sxtanna.database.task.builder.InsertBuilder
+import com.sxtanna.database.task.builder.SelectBuilder
+import com.sxtanna.database.task.builder.UpdateBuilder
+import com.sxtanna.database.type.base.SqlObject
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.memberProperties
+import java.util.function.Consumer
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 @Suppress("UNCHECKED_CAST")
-class KueryTask(val kuery : Kuery, override val resource : Connection) : DatabaseTask<Connection>() {
+class KueryTask(private val kuery : Kuery, override val resource : Connection) : DatabaseTask<Connection>() {
 
 	private lateinit var resultSet : ResultSet
 	private lateinit var preparedStatement : PreparedStatement
 
 
-	fun createTable(name : String, vararg columns : Duo<SqlType>) {
-		val createStatement = "Create Table If Not Exists $name ${columns.map { "${it.name} ${it.value}" }.joinToString(", ", "(", ")")}"
+	@JvmSynthetic
+	fun query(query : String, vararg values : Any?, block : ResultSet.() -> Unit) {
+		if (kuery.debug) println("Query '$query'")
 
-		if (kuery.debug) println("Create '$createStatement'")
-
-		preparedStatement = resource.prepareStatement(createStatement)
-		preparedStatement.execute()
-	}
-
-	fun select(table : String, columns : Array<String>, where : Array<Where> = emptyArray(), order : Array<Sort> = emptyArray(), preCheck : Boolean = false, handler : ResultSet.() -> Unit) {
-		var selectStatement = "Select ${columns.joinToString(", ")} From $table${if (where.isNotEmpty()) " Where ${where.map(Where::toString).joinToString(" AND ")}" else ""}"
-		if (order.isNotEmpty()) selectStatement += " ORDER BY ${order.map(Sort::toString).joinToString(", ")}"
-
-		preparedStatement = resource.prepareStatement(selectStatement)
-
-		var offSet = 0
-		where.forEachIndexed { i, where ->
-			where.prepare(preparedStatement, i + 1 + offSet)
-			if (where is Where.Between) offSet++
-		}
-
-		if (kuery.debug) println("Select '$selectStatement'")
+		preparedStatement = resource.prepareStatement(query)
+		values.forEachIndexed { index, any -> preparedStatement.setObject(index + 1, any) }
 
 		resultSet = preparedStatement.executeQuery()
-
-		if (preCheck && resultSet.next().not()) return
-		resultSet.handler()
+		resultSet.block()
 	}
 
-	fun insert(table : String, vararg columns : Duo<Any?>, duplicateKey : Duplicate? = null) {
-		val insertStatement = "Insert Into $table (${columns.map { it.name }.joinToString(", ")}) Values (${Array(columns.size, { "?" }).joinToString(", ")}) ${duplicateKey?.invoke(columns[0].name) ?: ""}"
+	@JvmOverloads
+	fun query(query : String, vararg values : Any? = emptyArray(), block : Consumer<ResultSet>) = query(query, *values) { block.accept(this) }
 
-		preparedStatement = resource.prepareStatement(insertStatement)
-		columns.forEachIndexed { i, value -> Value(value.value).prepare(preparedStatement, i + 1) }
 
-		if (kuery.debug) println("Insert '$insertStatement'")
+	fun execute(query : String, vararg values : Any?) {
+		if (kuery.debug) println("Statement '$query'")
+
+		preparedStatement = resource.prepareStatement(query)
+		if (values.isNotEmpty()) values.forEachIndexed { index, any -> preparedStatement.setObject(index + 1, any) }
 
 		preparedStatement.execute()
 	}
 
-	fun update(table : String, columns : Array<Duo<Any?>>, vararg where : Where = emptyArray()) {
-		val updateStatement = "Update $table Set ${columns.map { "${it.name} = ?" }.joinToString(", ")}${if (where.isNotEmpty()) " Where ${where.map(Where::toString).joinToString(" AND ")}" else ""}"
 
-		preparedStatement = resource.prepareStatement(updateStatement)
-		columns.forEachIndexed { i, value -> Value(value.value).prepare(preparedStatement, i + 1) }
+	@SafeVarargs
+	@Deprecated("Use CreateBuilder", ReplaceWith("Create.table(name).cos(*columns)", "com.sxtanna.database.task.builder.CreateBuilder.Create"))
+	fun create(name : String, vararg columns : Duo<SqlType>) {
+		execute("CREATE TABLE IF NOT EXISTS $name ${columns.map { "${it.name} ${it.value}" }.joinToString(prefix = "(", postfix = ")")}")
+	}
 
-		var offSet = columns.size
-		where.forEachIndexed { i, where ->
-			where.prepare(preparedStatement, i + 1 + offSet)
-			if (where is Where.Between) offSet++
-		}
+
+	@JvmSynthetic
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, columns : Array<out String> = ALL_ROWS, target : Array<out Target> = NO_WHERE, order : Array<out Sort> = NO_SORTS, block : ResultSet.() -> Unit) {
+		val statement = "SELECT ${columns.joinToString()} FROM $table${target.isNotEmpty().value(" WHERE ${target.joinToString(" AND ")}")}${order.isNotEmpty().value(" ORDER BY ${order.joinToString()}")}"
+
+		if (kuery.debug) println("Select '$statement'")
+
+		preparedStatement = resource.prepareStatement(statement)
+
+		var offSet = 0
+		target.forEachIndexed { i, data -> offSet += data.prep(preparedStatement, i + 1 + offSet) }
+
+		resultSet = preparedStatement.executeQuery()
+		if (resultSet.isBeforeFirst.not()) return resultSet.close()
+
+		block(resultSet)
+	}
+
+	@JvmOverloads
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, columns : Array<out String> = ALL_ROWS, target : Array<out Target> = NO_WHERE, order : Array<out Sort> = NO_SORTS, block : Consumer<ResultSet>) {
+		select(table, columns, target, order) { block.accept(this) }
+	}
+
+	@JvmSynthetic
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, order : Array<out Sort>, block : ResultSet.() -> Unit) = select(table, ALL_ROWS, NO_WHERE, order, block)
+
+	@JvmSynthetic
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, target : Array<out Target>, block : ResultSet.() -> Unit) = select(table, ALL_ROWS, target, NO_SORTS, block)
+
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, order : Array<out Sort>, block : Consumer<ResultSet>) = select(table, ALL_ROWS, NO_WHERE, order, block)
+
+	@Deprecated("Use SelectBuilder")
+	fun select(table : String, target : Array<out Target>, block : Consumer<ResultSet>) = select(table, ALL_ROWS, target, NO_SORTS, block)
+
+
+	@JvmOverloads
+	@Deprecated("Use InsertBuilder")
+	fun insert(table : String, vararg columns : Duo<Any?>, duplicateKey : Duplicate? = null) {
+		val ignore = duplicateKey is Ignore
+		val insertStatement = "INSERT ${ignore.value("IGNORE ")}INTO $table (${columns.map { it.name }.joinToString()}) VALUES ${values(columns.size)}${ignore.not().value(" ${duplicateKey?.invoke(columns[0].name)}")}"
+
+		execute(insertStatement, *columns.map { it.value }.toTypedArray())
+	}
+
+
+	@JvmOverloads
+	@Deprecated("Use UpdateBuilder")
+	fun update(table : String, columns : Array<Duo<Any?>>, vararg where : Target = emptyArray()) : Int {
+		val updateStatement = "UPDATE $table SET ${columns.map { "${it.name}=?" }.joinToString()}${where.isNotEmpty().value(" WHERE ${where.joinToString(" AND ")}")}"
 
 		if (kuery.debug) println("Update '$updateStatement'")
 
-		preparedStatement.executeUpdate()
+		preparedStatement = resource.prepareStatement(updateStatement)
+		columns.forEachIndexed { i, data -> preparedStatement.setObject(i + 1, data.value) }
+
+		var offSet = columns.size
+		where.forEachIndexed { i, data -> offSet += data.prep(preparedStatement, i + 1 + offSet) }
+
+		return preparedStatement.executeUpdate()
 	}
 
 
-	fun createTable(name : String, block : CreateBuilder.() -> Unit) {
-		CreateBuilder(name).apply(block).invoke()
-	}
+	//region Building Functions
+	@JvmSynthetic
+	operator fun CreateBuilder.invoke() = create(table, *columns.toTypedArray())
 
-	inline fun <reified T : SqlObject> createTable(name : String = T::class.simpleName!!) {
-		val columns : Array<Duo<SqlType>> = T::class.memberProperties.map { Duo(it.name, Resolver[it]) }.toTypedArray()
-		createTable(name, *columns)
-	}
+	fun execute(create : CreateBuilder) = create.invoke()
 
-	inline fun <reified T : SqlObject> select(table : String = T::class.simpleName!!) = SelectBuilder(T::class, table)
 
-	inline fun <reified T : SqlObject> insert(table : String = T::class.simpleName!!) = InsertBuilder(T::class, table)
-
-	inline fun <reified T : SqlObject> update(table : String = T::class.simpleName!!) = UpdateBuilder(T::class, table)
-
-	operator fun CreateBuilder.invoke() {
-		createTable(table, *columns.toTypedArray())
-	}
-
+	@JvmSynthetic
 	operator fun <T : SqlObject> SelectBuilder<T>.invoke(handler : T.() -> Unit) {
-		select(table, ALL_ROWS, where().toTypedArray(), sorts().toTypedArray()) {
+		select(table, ALL_ROWS, where.toTypedArray(), sorts.toTypedArray()) {
 			val creator = checkNotNull(kuery.creators[clazz] as? ResultSet.() -> T) { "Creator for type $clazz doesn't exist" }
 			mapWhileNext(creator).forEach(handler)
 		}
 	}
 
+	fun <T : SqlObject> execute(select : SelectBuilder<T>, handler : Consumer<T>) = select.invoke { handler.accept(this) }
+
+
+	@JvmSynthetic
 	operator fun <T : SqlObject> InsertBuilder<T>.invoke(obj : T) {
-		val columns = clazz.memberProperties.map { it.name co it.get(obj) }.toTypedArray()
+		val columns = clazz.declaredMemberProperties.map { it.name co obj.retrieve(it) }.toTypedArray()
 		insert(table, *columns, duplicateKey = if (ignore) Ignore() else if (update.isNotEmpty()) Update(*update) else null)
 	}
 
-	operator fun <T : SqlObject> UpdateBuilder<T>.invoke(obj : T) {
-		val columns = clazz.memberProperties.filterNot { it.name.toLowerCase() in ignoring }.map { it.name co it.get(obj) }.toTypedArray()
-		update(table, columns, Where.Equals(primary.name, checkNotNull(primary.get(obj)) { "Primary key data cannot be null" }))
+	fun <T : SqlObject> execute(insert : InsertBuilder<T>, obj : T) = insert.invoke(obj)
+
+
+	@JvmSynthetic
+	operator fun <T : SqlObject> UpdateBuilder<T>.invoke(obj : T) : Int {
+		val columns = clazz.declaredMemberProperties.filterNot { it.name.toLowerCase() in ignoring }.map { it.name co obj.retrieve(it) }.toTypedArray()
+		return update(table, columns, *where.toTypedArray())
 	}
 
-
-	class CreateBuilder(val table : String) {
-
-		val columns = mutableListOf<Duo<SqlType>>()
-
-		fun col(name : String, type : SqlType) = (name co type).apply { columns.add(this) }
-
-		fun col(name : String, type : () -> SqlType) = (name co type()).apply { columns.add(this) }
-
-	}
-
-	open class SelectBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
-
-		private val sorts = mutableListOf<Sort>()
-		private val where = mutableListOf<Where>()
+	fun <T : SqlObject> execute(update : UpdateBuilder<T>, obj : T) = update.invoke(obj)
+	//endregion
 
 
-		fun sorts() : List<Sort> = sorts
+	private fun values(count : Int) = Array(count, { "?" }).joinToString(prefix = "(", postfix = ")")
 
-		fun where() : List<Where> = where
+	private fun <T, R> T.retrieve(property : KProperty1<T, R>) : R {
+		val state = property.isAccessible
 
+		property.isAccessible = true
+		val obj = property.get(this)
+		property.isAccessible = state
 
-		fun like(column : String, value : Any, option : LikeOption, not : Boolean = false) : SelectBuilder<T> {
-			where.add(Like(column, value, option, not))
-			return this
-		}
-
-		fun startsWith(column : String, value : Any, not : Boolean = false) = like(column, value, Starts, not)
-
-		fun contains(column : String, value : Any, not : Boolean = false) = like(column, value, Contains, not)
-
-		fun endWith(column : String, value : Any, not : Boolean = false) = like(column, value, Ends, not)
-
-
-		fun equalTo(column : String, value : Any) : SelectBuilder<T> {
-			where.add(Where.Equals(column, value))
-			return this
-		}
-
-		fun between(column : String, first : Any, second : Any, not : Boolean = false) : SelectBuilder<T> {
-			where.add(Where.Between(column, first, second, not))
-			return this
-		}
-
-		fun lessThan(column : String, value : Any, orEqual : Boolean = false) : SelectBuilder<T> {
-			where.add(Where.Less(column, value, orEqual))
-			return this
-		}
-
-		fun greaterThan(column : String, value : Any, orEqual : Boolean = false) : SelectBuilder<T> {
-			where.add(Where.Greater(column, value, orEqual))
-			return this
-		}
-
-
-		fun sortedBy(vararg columns : Duo<Sort.Type>) : SelectBuilder<T> {
-			columns.forEach { sorts.add(if (it.value == Ascending) Ascend(it.name) else Descend(it.name)) }
-			return this
-		}
-
-		fun ascend(column : String) = sortedBy(Duo(column, Ascending))
-
-		fun descend(column : String) = sortedBy(Duo(column, Descending))
-
-
-		companion object Select {
-
-			inline fun <reified T : SqlObject> new(table : String = T::class.simpleName!!) = SelectBuilder(T::class, table)
-
-		}
-
-	}
-
-	class InsertBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
-
-		var ignore = false
-			private set
-		var update = emptyArray<String>()
-			private set
-
-
-		fun onDupeIgnore() : InsertBuilder<T> {
-			ignore = true
-			return this
-		}
-
-		fun onDupeUpdate(vararg column : CharSequence = arrayOf(clazz.memberProperties.find { it.findAnnotation<PrimaryKey>() != null }?.name ?: "")) : InsertBuilder<T> {
-			update = column.map { it.toString() }.toTypedArray()
-			return this
-		}
-
-
-		companion object Insert {
-
-			inline fun <reified T : SqlObject> new(table : String = T::class.simpleName!!) = InsertBuilder(T::class, table)
-
-		}
-
-	}
-
-	open class UpdateBuilder<T : SqlObject>(val clazz : KClass<T>, val table : String) {
-
-		val primary = checkNotNull(clazz.memberProperties.find { it.findAnnotation<PrimaryKey>() != null }) {
-			"Cannot update object without primary key"
-		}
-		val ignoring = mutableSetOf<String>()
-
-		init {
-			ignoring.add(primary.name.toLowerCase())
-		}
-
-
-		fun ignore(vararg column : String) : UpdateBuilder<T> {
-			ignoring.addAll(column.map { it.toLowerCase() })
-			return this
-		}
-
+		return obj
 	}
 
 }

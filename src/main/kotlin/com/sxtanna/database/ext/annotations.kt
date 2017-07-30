@@ -1,4 +1,4 @@
-package com.sxtanna.database.struct.obj
+package com.sxtanna.database.ext
 
 import com.sxtanna.database.struct.obj.SqlType.*
 import com.sxtanna.database.struct.obj.SqlType.Char

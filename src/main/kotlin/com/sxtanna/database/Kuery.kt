@@ -4,8 +4,9 @@ import com.sxtanna.database.base.Database
 import com.sxtanna.database.config.DatabaseConfigManager
 import com.sxtanna.database.config.KueryConfig
 import com.sxtanna.database.ext.loadOrSave
+import com.sxtanna.database.struct.base.Creator
 import com.sxtanna.database.task.KueryTask
-import com.sxtanna.database.type.SqlObject
+import com.sxtanna.database.type.base.SqlObject
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.io.File
@@ -13,13 +14,13 @@ import java.sql.Connection
 import java.sql.ResultSet
 import kotlin.reflect.KClass
 
-class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfig, KueryTask>() {
+class Kuery private constructor(override val config : KueryConfig) : Database<Connection, KueryConfig, KueryTask>() {
 
 	override val name : String = "Kuery"
 	lateinit var pool : HikariDataSource
 		private set
 
-	val debug get() = config.debug ?: false
+	val debug by lazy { config.debug ?: false }
 	val creators = mutableMapOf<KClass<out SqlObject>, ResultSet.() -> SqlObject>()
 
 	override fun load() {
@@ -60,11 +61,18 @@ class Kuery(override val config : KueryConfig) : Database<Connection, KueryConfi
 		creators[T::class] = creator
 	}
 
+	fun <T : SqlObject> addCreator(creator : Creator<T>) {
+		creators[creator.clazz] = creator
+	}
+
 
 	companion object : DatabaseConfigManager<KueryConfig, Kuery> {
 
 		@JvmStatic
-		override fun get(file : File) : Kuery = Kuery(getConfig(file))
+		override fun get(file : File) = super.get(file)
+
+		@JvmStatic
+		override fun get(config : KueryConfig) = Kuery(config)
 
 		@JvmStatic
 		override fun getConfig(file : File) = file.loadOrSave(KueryConfig.DEFAULT)

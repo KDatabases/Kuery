@@ -1,6 +1,10 @@
+@file:JvmName("KData")
+
 package com.sxtanna.database.ext
 
+import com.sxtanna.database.struct.obj.Sort
 import com.sxtanna.database.struct.obj.SqlType
+import com.sxtanna.database.struct.obj.Target
 import kotlin.reflect.KProperty1
 
 /**
@@ -39,6 +43,11 @@ const val LONG_TEXT_SIZE = NORM_MAX_UNSIGN
 /**
  * Represents all rows in a select statement
  */
+@get:JvmName("allRows")
 val ALL_ROWS = arrayOf("*")
+@get:JvmName("noSort")
+val NO_SORTS = arrayOf<Sort>()
+@get:JvmName("noWhere")
+val NO_WHERE = arrayOf<Target>()
 
 typealias Adapter = KProperty1<*, *>.() -> SqlType

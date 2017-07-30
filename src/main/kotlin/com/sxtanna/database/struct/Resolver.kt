@@ -23,13 +23,14 @@ object Resolver {
 
 	private val adapters = mutableMapOf<KClass<*>, Adapter>()
 
+
 	init {
-		adapters[Char::class] = { SqlType.Char(1, isPrimaryKey(), isNotNull()) }
-		adapters[UUID::class] = { SqlType.Char(36, isPrimaryKey(), isNotNull()) }
+		this[Char::class] = { SqlType.Char(1, isPrimaryKey(), isNotNull()) }
+		this[UUID::class] = { SqlType.Char(36, isPrimaryKey(), isNotNull()) }
 
-		adapters[Boolean::class] = { SqlType.Bool(isPrimaryKey(), isNotNull()) }
+		this[Boolean::class] = { SqlType.Bool(isPrimaryKey(), isNotNull()) }
 
-		adapters[Enum::class] = {
+		this[Enum::class] = {
 			if (isSerialized()) SqlType.VarChar(VARCHAR_SIZE, isPrimaryKey(), isNotNull())
 			else {
 				@Suppress("UNCHECKED_CAST")
@@ -37,14 +38,14 @@ object Resolver {
 			}
 		}
 
-		adapters[Timestamp::class] = {
+		this[Timestamp::class] = {
 			val time = findAnnotation<Time>()
 			SqlType.Timestamp(time?.current ?: false, time?.updating ?: false, isPrimaryKey(), isNotNull())
 		}
 
 
 		val textAdapter : Adapter = {
-			when(findAnnotation<TextType>()?.value) {
+			when (findAnnotation<TextType>()?.value) {
 				SqlType.TinyText::class -> SqlType.TinyText(isPrimaryKey(), isNotNull())
 				SqlType.MediumText::class -> SqlType.MediumText(isPrimaryKey(), isNotNull())
 				SqlType.LongText::class -> SqlType.LongText(isPrimaryKey(), isNotNull())
@@ -54,8 +55,7 @@ object Resolver {
 
 						if (fix > 0) SqlType.Char(fix, isPrimaryKey(), isNotNull())
 						else SqlType.VarChar(findAnnotation<Size>()?.length ?: VARCHAR_SIZE, isPrimaryKey(), isNotNull())
-					}
-					else SqlType.Text(isPrimaryKey(), isNotNull())
+					} else SqlType.Text(isPrimaryKey(), isNotNull())
 				}
 			}
 		}
@@ -72,7 +72,9 @@ object Resolver {
 				SqlType.MediumInt::class -> SqlType.MediumInt(length.coerceAtMost(MEDIUM_MAX_UNSIGN), isUnsigned(), isPrimaryKey(), isNotNull())
 				SqlType.BigInt::class -> SqlType.BigInt(length.toString(), isUnsigned(), isPrimaryKey(), isNotNull())
 				else -> {
-					if (returnType.jvmErasure == BigInteger::class) SqlType.BigInt(length.toString(), isUnsigned(), isPrimaryKey(), isNotNull())
+					if (returnType.jvmErasure == BigInteger::class || returnType.jvmErasure == Long::class)  {
+						SqlType.BigInt(length.toString(), isUnsigned(), isPrimaryKey(), isNotNull())
+					}
 					else SqlType.NormInt(length.toLong().coerceAtMost(NORM_MAX_UNSIGN), isUnsigned(), isPrimaryKey(), isNotNull())
 				}
 			}
@@ -87,11 +89,15 @@ object Resolver {
 	}
 
 
+	operator fun set(type : KClass<*>, adapter : Adapter) {
+		adapters[type] = adapter
+	}
+
 	operator fun get(property : KProperty1<*, *>) : SqlType {
 		val type = property.returnType.jvmErasure
-		if (type.isSubclassOf(Enum::class)) return adapters[Enum::class]!!.invoke(property)
+		val adapter = checkNotNull(adapters[type] ?: adapters[if (type.isEnum()) Enum::class else Any::class])
 
-		return (adapters[property.returnType.jvmErasure] ?: adapters[Any::class]!!).invoke(property)
+		return checkNotNull(adapter) { "Random Impossible error... but for type $type" }.invoke(property)
 	}
 
 
@@ -103,6 +109,8 @@ object Resolver {
 
 	private fun KProperty1<*, *>.isPrimaryKey() = findAnnotation<PrimaryKey>() != null
 
+
+	private fun KClass<*>.isEnum() = this.isSubclassOf(Enum::class)
 
 	private fun <K, V> MutableMap<K, V>.multiplePut(value : V, vararg keys : K) = keys.forEach { put(it, value) }
 

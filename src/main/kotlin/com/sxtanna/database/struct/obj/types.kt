@@ -1,28 +1,17 @@
 package com.sxtanna.database.struct.obj
 
-import com.sxtanna.database.struct.obj.Sort.Type.Ascending
-import com.sxtanna.database.struct.obj.Sort.Type.Descending
-import kotlin.Byte
-import kotlin.Double
-import kotlin.Enum
-import kotlin.Float
-import kotlin.Int
-import kotlin.Long
-import kotlin.Short
-import kotlin.String
 import java.math.BigInteger
-import java.sql.PreparedStatement
 import kotlin.reflect.KClass
 
 sealed class SqlType(val name : String) {
 
-	open var primaryKey : Boolean = false
-	open var notNull : Boolean = true
+	open protected var primaryKey : Boolean = false
+	open protected var notNull : Boolean = true
 
 
 	protected open fun name() = name
 
-	override fun toString() : String = "${name()}${if (primaryKey) " Primary Key" else ""}${if (notNull) " Not Null" else ""}"
+	override fun toString() : String = "${name()}${if (primaryKey) " PRIMARY KEY" else ""}${if (notNull) " NOT NULL" else ""}"
 
 
 	//region Base Types
@@ -34,10 +23,7 @@ sealed class SqlType(val name : String) {
 
 		open fun size() = size
 
-		override fun toString() : String {
-			val outputName = name()
-			return "$outputName${super.toString().substringAfter(outputName)}"
-		}
+		override fun toString() = name().let { "$it${super.toString().substringAfter(it)}" }
 
 	}
 
@@ -129,37 +115,30 @@ sealed class SqlType(val name : String) {
 
 	class EnumSet @JvmOverloads constructor(val enumClass : KClass<out Enum<*>>, override var primaryKey : Boolean = false, override var notNull : Boolean = true) : SqlType("ENUM") {
 
-		override fun toString() : String {
-			val constants = enumClass.java.enumConstants.joinToString(", ") { "'$it'" }
-			return "$name($constants)${super.toString().substringAfter(name)}"
-		}
+		override fun toString() = "$name(${enumClass.java.enumConstants.joinToString { "'$it'" }})${super.toString().substringAfter(name)}"
 
 	}
 
 	class ValueSet @JvmOverloads constructor(val values : Array<String>, override var primaryKey : Boolean = false, override var notNull : Boolean = true) : SqlType("SET") {
 
-		override fun toString() : String {
-			val clampedValues = Array(64) { values[it] }.joinToString(", ") { "'$it'" }
-			return "$name($clampedValues)${super.toString().substringAfter(name)}"
-		}
+		override fun toString() = "$name(${Array(64) { values[it] }.joinToString { "'$it'" }})${super.toString().substringAfter(name)}"
 
 	}
 
-	class Timestamp @JvmOverloads constructor(val current : Boolean = false, val updating : Boolean = false, override var primaryKey : Boolean = false, override var notNull : Boolean = true) : SqlType("TIMESTAMP") {
+	class Timestamp @JvmOverloads constructor(private val current : Boolean = false, private val updating : Boolean = false, override var primaryKey : Boolean = false, override var notNull : Boolean = true) : SqlType("TIMESTAMP") {
 
-		override fun toString() : String {
-			var base = super.toString()
-			if (current) base += CURRENT
-			if (updating) base += "${if (current.not()) CURRENT else ""}${UPDATE}"
+		override fun toString() = buildString {
+			append(super.toString())
 
-			return base
+			if (current) append(CURRENT)
+			if (updating) append("${if (current.not()) CURRENT else ""}$UPDATE")
 		}
 
 
 		companion object {
 
-			const val UPDATE = " ON UPDATE CURRENT_TIMESTAMP"
-			const val CURRENT = " DEFAULT CURRENT_TIMESTAMP"
+			private const val UPDATE = " ON UPDATE CURRENT_TIMESTAMP"
+			private const val CURRENT = " DEFAULT CURRENT_TIMESTAMP"
 
 		}
 
@@ -175,104 +154,14 @@ sealed class Duplicate {
 
 	class Ignore : Duplicate() {
 
-		override operator fun invoke(key : String) : String = "On Duplicate Key Update $key=$key"
+		override operator fun invoke(key : String) : String = "ON DUPLICATE KEY UPDATE $key=$key"
 
 	}
 
-	class Update(vararg val value : String) : Duplicate() {
+	class Update(private vararg val value : String) : Duplicate() {
 
-		override fun invoke(key : String) : String = "On Duplicate Key Update ${value.map { "$it=Values($it)" }.joinToString(", ")}"
+		override fun invoke(key : String) : String = "ON DUPLICATE KEY UPDATE ${value.map { "$it=VALUES($it)" }.joinToString()}"
 
-	}
-
-}
-
-sealed class Where(val column : String, val data : Any) {
-
-	open fun prepare(prep : PreparedStatement, position : Int) {
-		set(prep, position, data)
-	}
-
-	protected fun set(prep : PreparedStatement, position : Int, data : Any) {
-		when (data) {
-			is Byte -> prep.setByte(position, data)
-			is Short -> prep.setShort(position, data)
-			is Int -> prep.setInt(position, data)
-			is Long -> prep.setLong(position, data)
-			is Double -> prep.setDouble(position, data)
-			is String -> prep.setString(position, data)
-			else -> prep.setString(position, data.toString())
-		}
-	}
-
-
-	open class RelationalWhere(column : String, data : Any, val orEqual : Boolean, val symbol : Char) : Where(column, data) {
-
-		override fun toString() : String = "$column $symbol${if (orEqual) "=" else ""} ?"
-
-	}
-
-
-	class Equals(column : String, data : Any) : Where(column, data) {
-
-		override fun toString() : String = "$column=?"
-
-	}
-
-	class Like(column : String, data : Any, val option : LikeOption, var not : Boolean = false) : Where(column, data) {
-
-		override fun toString() : String = "$column ${if (not) "NOT " else ""}LIKE ${option.block}"
-
-
-		enum class LikeOption(val block : String) {
-
-			Starts("?${WILDCARD}"),
-			Ends("${WILDCARD}?"),
-			Contains("${WILDCARD}?${WILDCARD}");
-
-		}
-
-		companion object {
-
-			const val WILDCARD = '%'
-
-		}
-
-	}
-
-	class Between(column : String, first : Any, val second : Any, var not : Boolean = false) : Where(column, first) {
-
-		override fun prepare(prep : PreparedStatement, position : Int) {
-			set(prep, position, data)
-			set(prep, position + 1, second)
-		}
-
-		override fun toString() : String = "$column ${if (not) "NOT " else ""}BETWEEN ? AND ?"
-
-	}
-
-	class Greater(column : String, data : Any, orEqual : Boolean = false) : RelationalWhere(column, data, orEqual, '>')
-
-	class Less(column : String, data : Any, orEqual : Boolean = false) : RelationalWhere(column, data, orEqual, '<')
-
-}
-
-sealed class Sort(val column : String, val type : Type) {
-
-	override fun toString() : String = "$column $type"
-
-
-	class Ascend(column : String) : Sort(column, Ascending)
-
-	class Descend(column : String) : Sort(column, Descending)
-
-
-	enum class Type(val value : String) {
-
-		Ascending("ASC"),
-		Descending("DESC");
-
-		override fun toString() : String = value
 	}
 
 }
