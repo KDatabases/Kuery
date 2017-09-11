@@ -2,10 +2,10 @@ package com.sxtanna.database.tests
 
 import com.sxtanna.database.Kuery
 import com.sxtanna.database.ext.PrimaryKey
-import com.sxtanna.database.task.builder.CreateBuilder.Create
-import com.sxtanna.database.task.builder.InsertBuilder
-import com.sxtanna.database.task.builder.InsertBuilder.Insert
-import com.sxtanna.database.task.builder.SelectBuilder.Select
+import com.sxtanna.database.task.builder.Create
+import com.sxtanna.database.task.builder.Delete
+import com.sxtanna.database.task.builder.Insert
+import com.sxtanna.database.task.builder.Select
 import com.sxtanna.database.type.base.SqlObject
 import java.io.File
 import kotlin.test.assertEquals
@@ -23,8 +23,11 @@ class KKueryTestOrm : DatabaseTest<Kuery>() {
 			createUser()
 
 			// You can either use the #invoke(obj : T) function or use a direct call
-			insertUser(User("Emiliee"))
-			insertUser(User("Sxtanna"))
+
+            val (emilie, ranald) = User("Emiliee") to User("Sxtanna")
+
+			insertUser(emilie)
+			insertUser(ranald)
 
 			var users = 0
 
@@ -58,6 +61,8 @@ class KKueryTestOrm : DatabaseTest<Kuery>() {
 
 			assertEquals(names, listOf("Emiliee", "Sxtanna"), "Results were in wrong order")
 
+            deleteSNames()
+            deleteSNames(emilie)
 		}
 	}
 
@@ -72,7 +77,7 @@ class KKueryTestOrm : DatabaseTest<Kuery>() {
 		/**
 		 * Simple insert statement, will update primary key if duplicate.
 		 *
-		 * [InsertBuilder.onDupeUpdate] accepts specific columns.
+		 * [Insert.onDupeUpdate] accepts specific columns.
 		 */
 		val insertUser = Insert.into<User>().onDupeUpdate()
 
@@ -90,6 +95,11 @@ class KKueryTestOrm : DatabaseTest<Kuery>() {
 		 * This statement will select all users and order them by name
 		 */
 		val selectAscendNames = Select.from<User>().ascend("name")
+
+        /**
+         * This statement will delete all users whose name starts with the letter 'S'
+         */
+        val deleteSNames = Delete.from<User>().startsWith("name", "S")
 
 
 		/**

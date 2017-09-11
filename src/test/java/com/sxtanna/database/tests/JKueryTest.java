@@ -5,6 +5,7 @@ import com.sxtanna.database.config.KueryConfig;
 import com.sxtanna.database.ext.Kext;
 import com.sxtanna.database.ext.Krs;
 import com.sxtanna.database.struct.base.Duo;
+import com.sxtanna.database.task.builder.Create;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -23,7 +24,6 @@ import static com.sxtanna.database.struct.obj.Duplicate.Update;
 import static com.sxtanna.database.struct.obj.Sort.Order;
 import static com.sxtanna.database.struct.obj.SqlType.VarChar;
 import static com.sxtanna.database.struct.obj.Target.Where;
-import static com.sxtanna.database.task.builder.CreateBuilder.Create;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
@@ -82,6 +82,9 @@ public final class JKueryTest extends DatabaseTest<Kuery> {
 					e.printStackTrace();
 				}
 			});
+
+			task.execute("DELETE FROM User WHERE name='Emiliee'");
+			task.execute("DELETE FROM User WHERE name LIKE 'S%'");
 		});
 
 		// Non ORM with helper methods
@@ -129,6 +132,8 @@ public final class JKueryTest extends DatabaseTest<Kuery> {
 
 			assertIterableEquals(names, Arrays.asList("Emiliee", "Sxtanna"));
 
+            task.delete("User", Where.starts("name", "S"));
+            task.delete("User", Where.equals("name", "Emiliee"));
 		});
 
 
@@ -173,6 +178,8 @@ public final class JKueryTest extends DatabaseTest<Kuery> {
 
 			assertIterableEquals(names, Arrays.asList("Emiliee", "Sxtanna"), "Results were in wrong order");
 
+            task.delete("User", Where.starts("name", "S"));
+            task.delete("User", Where.equals("name", "Emiliee"));
 		});
 	}
 

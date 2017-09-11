@@ -8,6 +8,7 @@ import kotlin.reflect.KClass
 abstract class Creator<O : SqlObject>(val clazz : KClass<O>) : (ResultSet) -> O, Function<ResultSet, O> {
 	constructor(clazz : Class<O>) : this(clazz.kotlin)
 
+
 	override final fun invoke(rs : ResultSet) = apply(rs)
 
 }

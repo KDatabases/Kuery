@@ -4,9 +4,10 @@ import com.sxtanna.database.Kuery;
 import com.sxtanna.database.ext.Kext;
 import com.sxtanna.database.ext.Krs;
 import com.sxtanna.database.ext.PrimaryKey;
-import com.sxtanna.database.task.builder.CreateBuilder;
-import com.sxtanna.database.task.builder.InsertBuilder;
-import com.sxtanna.database.task.builder.SelectBuilder;
+import com.sxtanna.database.task.builder.Create;
+import com.sxtanna.database.task.builder.Delete;
+import com.sxtanna.database.task.builder.Insert;
+import com.sxtanna.database.task.builder.Select;
 import com.sxtanna.database.type.base.SqlObject;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,20 +15,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.sxtanna.database.task.builder.CreateBuilder.Create;
-import static com.sxtanna.database.task.builder.InsertBuilder.Insert;
-import static com.sxtanna.database.task.builder.SelectBuilder.Select;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 public final class JKueryTestOrm extends DatabaseTest<Kuery> {
 
-	private final CreateBuilder createUser = Create.from(User.class);
-	private final InsertBuilder<User> insertUser = Insert.into(User.class).onDupeUpdate();
+	private final Create createUser = Create.from(User.class);
+	private final Insert<User> insertUser = Insert.into(User.class).onDupeUpdate();
 
-	private final SelectBuilder<User> selectUser = Select.from(User.class);
-	private final SelectBuilder<User> selectSNames = Select.from(User.class).startsWith("name", "S");
-	private final SelectBuilder<User> selectAscendNames = Select.from(User.class).ascend("name");
+	private final Select<User> selectUser = Select.from(User.class);
+	private final Select<User> selectSNames = Select.from(User.class).startsWith("name", "S");
+	private final Select<User> selectAscendNames = Select.from(User.class).ascend("name");
+	private final Delete<User> deleteSNames = Delete.from(User.class).startsWith("name", "S");
 
 
 	@NotNull
@@ -49,8 +48,10 @@ public final class JKueryTestOrm extends DatabaseTest<Kuery> {
 
 			task.execute(createUser);
 
-			task.execute(insertUser, new User("Emiliee"));
-			task.execute(insertUser, new User("Sxtanna"));
+			final User emilie = new User("Emiliee"), ranald = new User("Sxtanna");
+
+			task.execute(insertUser, emilie);
+			task.execute(insertUser, ranald);
 
 			final int[] users = {0};
 
@@ -79,6 +80,8 @@ public final class JKueryTestOrm extends DatabaseTest<Kuery> {
 
 			assertIterableEquals(names, Arrays.asList("Emiliee", "Sxtanna"), "Results were in wrong order");
 
+			task.execute(deleteSNames);
+			task.execute(deleteSNames, emilie);
 		});
 	}
 

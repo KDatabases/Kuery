@@ -1,6 +1,5 @@
 package com.sxtanna.database.struct
 
-import com.sxtanna.database.struct.obj.SqlType
 import com.sxtanna.database.struct.obj.SqlType.NormInt
 
 /**
@@ -8,32 +7,30 @@ import com.sxtanna.database.struct.obj.SqlType.NormInt
  */
 enum class SqlTypes {
 
-	INT {
+    INT {
 
-		@JvmOverloads
-		fun of(size : Long, unsigned : Boolean = false,  primaryKey : Boolean = false, notNull : Boolean = true) : SqlType.NormInt {
-			return NormInt(size, unsigned, primaryKey, notNull)
-		}
+        @JvmOverloads
+        fun of(size : Long, unsigned : Boolean = false, primaryKey : Boolean = false, notNull : Boolean = true) = NormInt(size, unsigned, primaryKey, notNull)
 
-	},
-	TINYINT,
-	SMALLINT,
-	MEDIUMINT,
-	BIGINT,
+    },
+    TINYINT,
+    SMALLINT,
+    MEDIUMINT,
+    BIGINT,
 
-	DECIMAL,
+    DECIMAL,
 
-	CHAR,
-	VARCHAR,
+    CHAR,
+    VARCHAR,
 
-	TEXT,
-	TINYTEXT,
-	MEDIUMTEXT,
-	LONGTEXT,
+    TEXT,
+    TINYTEXT,
+    MEDIUMTEXT,
+    LONGTEXT,
 
-	BOOL,
-	ENUM,
-	VALUE,
-	TIMESTAMP;
+    BOOL,
+    ENUM,
+    VALUE,
+    TIMESTAMP;
 
 }

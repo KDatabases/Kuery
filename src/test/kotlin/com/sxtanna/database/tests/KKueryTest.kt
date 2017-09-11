@@ -63,6 +63,9 @@ class KKueryTest : DatabaseTest<Kuery>() {
 			}
 
 			assertEquals(names, listOf("Emiliee", "Sxtanna"), "Results were in wrong order")
+
+			delete("User", Where.starts("name", "S"))
+			delete("User", Where.equals("name", "Emiliee"))
 		}
 
 	}

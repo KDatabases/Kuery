@@ -1,6 +1,5 @@
 package com.sxtanna.database.config
 
-import com.sxtanna.database.config.KueryConfig.*
 
 data class KueryConfig(val server : ServerOptions = ServerOptions(), val user : UserOptions = UserOptions(), val pool : PoolOptions = PoolOptions(), val debug : Boolean? = false) : DatabaseConfig {
 

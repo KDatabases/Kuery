@@ -9,6 +9,8 @@ import com.sxtanna.database.task.KueryTask
 import com.sxtanna.database.type.base.SqlObject
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.sql.Connection
 import java.sql.ResultSet
@@ -20,8 +22,11 @@ class Kuery private constructor(override val config : KueryConfig) : Database<Co
 	lateinit var pool : HikariDataSource
 		private set
 
-	val debug by lazy { config.debug ?: false }
+    val debug by lazy { config.debug ?: false }
+    val logger : Logger = LoggerFactory.getLogger(this::class.java)
+
 	val creators = mutableMapOf<KClass<out SqlObject>, ResultSet.() -> SqlObject>()
+
 
 	override fun load() {
 		val hikariConfig = HikariConfig().apply {
@@ -75,7 +80,7 @@ class Kuery private constructor(override val config : KueryConfig) : Database<Co
 		override fun get(config : KueryConfig) = Kuery(config)
 
 		@JvmStatic
-		override fun getConfig(file : File) = file.loadOrSave(KueryConfig.DEFAULT)
+		override fun getConfig(file : File) : KueryConfig = file.loadOrSave(KueryConfig.DEFAULT)
 
 	}
 

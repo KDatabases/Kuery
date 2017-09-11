@@ -4,10 +4,11 @@ import com.sxtanna.database.ext.co
 import com.sxtanna.database.struct.Resolver
 import com.sxtanna.database.struct.base.Duo
 import com.sxtanna.database.struct.obj.SqlType
+import com.sxtanna.database.task.builder.base.BuilderStatement
 import com.sxtanna.database.type.base.SqlObject
 import kotlin.reflect.full.declaredMemberProperties
 
-data class CreateBuilder(val table : String) {
+data class Create(override val table : String) : BuilderStatement() {
 
 	val columns = mutableListOf<Duo<SqlType>>()
 	private var inited = false
@@ -33,15 +34,17 @@ data class CreateBuilder(val table : String) {
 	}
 
 
-	companion object Create {
+	companion object {
 
-		fun table(table : String) = CreateBuilder(table)
+		@JvmStatic
+		fun table(table : String) = Create(table)
 
-		@JvmSynthetic
-		inline fun <reified T : SqlObject> from(table : String = T::class.simpleName!!) = CreateBuilder(table).init<T>()
 
+		inline fun <reified T : SqlObject> from(table : String = T::class.simpleName!!) = Create(table).init<T>()
+
+		@JvmStatic
 		@JvmOverloads
-		fun <T : SqlObject> from(clazz : Class<T>, table : String = clazz.simpleName!!) = CreateBuilder(table).init(clazz)
+		fun <T : SqlObject> from(clazz : Class<T>, table : String = clazz.simpleName!!) = Create(table).init(clazz)
 
 	}
 

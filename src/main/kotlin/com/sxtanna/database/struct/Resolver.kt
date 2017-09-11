@@ -1,7 +1,7 @@
 package com.sxtanna.database.struct
 
 import com.sxtanna.database.ext.*
-import com.sxtanna.database.struct.obj.*
+import com.sxtanna.database.struct.obj.SqlType
 import java.math.BigInteger
 import java.sql.Timestamp
 import java.util.*

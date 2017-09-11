@@ -6,10 +6,10 @@ import com.sxtanna.database.struct.base.Creator
 import com.sxtanna.database.struct.base.Duo
 import com.sxtanna.database.struct.obj.Sort
 import com.sxtanna.database.struct.obj.Target
-import com.sxtanna.database.task.builder.CreateBuilder
-import com.sxtanna.database.task.builder.InsertBuilder
-import com.sxtanna.database.task.builder.SelectBuilder
-import com.sxtanna.database.task.builder.UpdateBuilder
+import com.sxtanna.database.task.builder.Create
+import com.sxtanna.database.task.builder.Insert
+import com.sxtanna.database.task.builder.Select
+import com.sxtanna.database.task.builder.Update
 import com.sxtanna.database.type.base.SqlObject
 import java.sql.ResultSet
 import java.util.function.Function
@@ -54,16 +54,16 @@ fun targets(vararg targets : Target) = targets
 
 //region Build Function Creators
 @JvmSynthetic
-inline fun <reified T : SqlObject> createTable(name : String = T::class.simpleName!!) = CreateBuilder.from<T>(name)
+inline fun <reified T : SqlObject> createTable(name : String = T::class.simpleName!!) = Create.from<T>(name)
 
 @JvmSynthetic
-inline fun <reified T : SqlObject> selectFrom(table : String = T::class.simpleName!!, noinline block : SelectBuilder<T>.() -> Unit = {}) = SelectBuilder(T::class, table).apply(block)
+inline fun <reified T : SqlObject> selectFrom(table : String = T::class.simpleName!!, noinline block : Select<T>.() -> Unit = {}) = Select(T::class, table).apply(block)
 
 @JvmSynthetic
-inline fun <reified T : SqlObject> insertInto(table : String = T::class.simpleName!!, noinline block : InsertBuilder<T>.() -> Unit = {}) = InsertBuilder(T::class, table).apply(block)
+inline fun <reified T : SqlObject> insertInto(table : String = T::class.simpleName!!, noinline block : Insert<T>.() -> Unit = {}) = Insert(T::class, table).apply(block)
 
 @JvmSynthetic
-inline fun <reified T : SqlObject> updateIn(table : String = T::class.simpleName!!, noinline block : UpdateBuilder<T>.() -> Unit = {}) = UpdateBuilder(T::class, table).apply(block)
+inline fun <reified T : SqlObject> updateIn(table : String = T::class.simpleName!!, noinline block : Update<T>.() -> Unit = {}) = Update(T::class, table).apply(block)
 //endregion
 
 

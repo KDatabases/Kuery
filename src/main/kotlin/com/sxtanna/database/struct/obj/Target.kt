@@ -6,13 +6,13 @@ import java.sql.PreparedStatement
 
 sealed class Target {
 
-	protected abstract val data : Any
+	protected abstract val data : Any?
 	protected abstract val column : String
 
 	protected open var not : Boolean = false
 
 
-	override fun toString() = "$column=?"
+	override fun toString() = "$column${if (not) "!" else ""}=?"
 
 
 	open fun data() = data
@@ -23,7 +23,7 @@ sealed class Target {
 	internal open fun prep(statement : PreparedStatement, pos : Int) = statement.setObject(pos, data()).let { 0 }
 
 
-	private class Equal(override var not : Boolean, override val data : Any, override val column : String) : Target()
+	private class Equal(override var not : Boolean, override val data : Any?, override val column : String) : Target()
 
 	private class Between(override var not : Boolean, override val data : Any, private val other : Any, override val column : String) : Target() {
 
@@ -81,11 +81,11 @@ sealed class Target {
 		//region Equals and Between
 		@JvmStatic
 		@JvmOverloads
-		fun equals(column : String, data : Any, not : Boolean = false) : Target = Equal(not, data, column)
+		fun equals(column : String, data : Any?, not : Boolean = false) : Target = Equal(not, data, column)
 
 		@JvmSynthetic
 		@JvmName("equalW")
-		infix fun String.equals(data : Any) = equals(this, data)
+		infix fun String.equals(data : Any?) = equals(this, data)
 
 
 		@JvmStatic
