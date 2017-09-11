@@ -2,12 +2,17 @@
 MySQL Kotlin wrapper based on HikariCP
 
 ## How to get it!
+### Maven
 ```xml
 <dependency>
     <groupId>com.sxtanna.database</groupId>
     <artifactId>Kuery</artifactId>
     <version>LATEST</version>
 </dependency>
+```
+### Gradle
+```groovy
+compile "com.sxtanna.database:Kuery:+"
 ```
 
 ## How it works!
