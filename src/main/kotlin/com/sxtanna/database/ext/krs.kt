@@ -74,6 +74,8 @@ fun getInt(rs : ResultSet, column : String) = attempt { rs.getInt(column) }
 
 fun getLong(rs : ResultSet, column : String) = attempt { rs.getLong(column) }
 
+fun getBoolean(rs : ResultSet, column : String) = attempt { rs.getBoolean(column) }
+
 fun getString(rs : ResultSet, column : String) = attempt { rs.getString(column) }
 
 fun getDouble(rs : ResultSet, column : String) = attempt { rs.getDouble(column) }
